@@ -20,14 +20,29 @@ module Middleman::Lunr
         fields.push(d)
       end
 
-      @extension.sitemap.resources.each do |res|
-        if res.data[:index]
+      #@extension.sitemap.resources.each do |res|
+      pages = @extension.sitemap.resources.find_all { |p| p.source_file.match(/\.md/) }
+
+      pages.each_with_index do |res, index|
+        #if res.data[:index]
           doc = { id: res.url.to_s }
           key = res.url.to_s
           data = {}
 
+          #https://gist.github.com/hjc/4450428
           if options[:body]
-            doc[:body] = File.read(res.source_file)
+              stopwords = %w{the a by on for of are with just but and to the my I has some in}
+              text = res.render({:layout => false }).gsub(%r{</?[^>]+?>}, '' )
+              sentences = text.gsub(/\s+/, ' ').strip.split(/\.|\?|!/)
+              ideal_sentences = sentences
+              #sentences_sorted = sentences.sort_by { |sent| sent.length }
+             # one_third = sentences_sorted.length / 1.5
+              #ideal_sentences = sentences_sorted.slice(one_third, one_third + 1)
+             # ideal_sentences.select! { |s| s =~ /is|are/ }
+              #descriptives = ideal_sentences.select! { |s| s =~ /is|are/ }
+              # doc[:body] = ideal_sentences
+             #doc[:body] = File.read(res.source_file)
+             doc[:body] = ideal_sentences.join(". ") + "."#ideal_sentences#res.render({:layout => false }).gsub(%r{</?[^>]+?>}, '' )
           end
 
           options[:data].each do |d|
@@ -38,10 +53,10 @@ module Middleman::Lunr
           docs << doc
           map[key] = data
         end
-      end
+     # end
 
       cxt = V8::Context.new
-      cxt.load(File.expand_path('../../../js/lunr.min.js', __FILE__))
+      cxt.load(File.expand_path('../../../js/lunr.js', __FILE__))
       cxt.eval('lunr.Index.prototype.dumpIndex = function(){return JSON.stringify(this.toJSON());}')
       ref = cxt.eval('lunr')
 
@@ -50,13 +65,14 @@ module Middleman::Lunr
         fields.each do |name|
           this.field(name) #, {:boost => boost})
         end
+        docs.each do |doc|
+          this.add(doc)
+        end
       end
 
       idx = ref.call(lunr_conf)
 
-      docs.each do |doc|
-        idx.add(doc)
-      end
+
 
       data = JSON.parse(idx.dumpIndex(), max_nesting: false)
 
