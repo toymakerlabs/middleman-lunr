@@ -33,6 +33,8 @@ module Middleman::Lunr
           if options[:body]
               stopwords = %w{the a by on for of are with just but and to the my I has some in}
               text = res.render({:layout => false }).gsub(%r{</?[^>]+?>}, '' )
+              words = text.scan(/\w+/)
+              keywords = words.select { |w| !stopwords.include?(w)}
               sentences = text.gsub(/\s+/, ' ').strip.split(/\.|\?|!/)
               ideal_sentences = sentences
               #sentences_sorted = sentences.sort_by { |sent| sent.length }
@@ -42,7 +44,7 @@ module Middleman::Lunr
               #descriptives = ideal_sentences.select! { |s| s =~ /is|are/ }
               # doc[:body] = ideal_sentences
              #doc[:body] = File.read(res.source_file)
-             doc[:body] = ideal_sentences.join(". ") + "."#ideal_sentences#res.render({:layout => false }).gsub(%r{</?[^>]+?>}, '' )
+             doc[:body] = keywords.join(" ")#ideal_sentences.join(". ") + "."#ideal_sentences#res.render({:layout => false }).gsub(%r{</?[^>]+?>}, '' )
           end
 
           options[:data].each do |d|
